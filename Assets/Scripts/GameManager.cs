@@ -15,20 +15,13 @@ public class GameManager : MonoBehaviour
     private int _biscuitPerClick = 1;
     private int _totalBiscuits = 0;
     private int _biscuitsPerSec;
-
-    private float _biscuitsPerSecTimer;
-
-    private GameSaveManager _gameSaveManager; 
+    private float _biscuitsPerSecTimer; 
 
     //To track the current upgraed levels 
     private Dictionary<string, int> _upgradeLevels = new Dictionary<string, int>();
-
     private int TotalBiscuits
     {
-        get
-        {
-            return _totalBiscuits;
-        }
+        get { return _totalBiscuits;  }
         set
         {
             _totalBiscuits = value;
@@ -38,10 +31,7 @@ public class GameManager : MonoBehaviour
     }
     private int BiscuitPerSec
     {
-        get
-        {
-            return _biscuitsPerSec;
-        }
+        get { return _biscuitsPerSec;  }
         set
         {
             _biscuitsPerSec = value; 
@@ -51,7 +41,6 @@ public class GameManager : MonoBehaviour
     }
     private void Start()
     {
-        _gameSaveManager = FindObjectOfType<GameSaveManager>();
         LoadGame(); //Load the game data at the start 
     }
     public int AddBiscuits()
@@ -82,19 +71,19 @@ public class GameManager : MonoBehaviour
             {
                 case UpgradeType.BiscuitUpgrade:
                     _biscuitPerClick = 1 + level * 2;
-                    _upgradeLevels["BiscuitUpgrade"] = level; 
+                    _upgradeLevels["BiscuitUpgrade"] = level; //Save level 
                     break;
 
                 case UpgradeType.LoafingUpgrade:
                     _biscuitsPerSec = level;
-                    _upgradeLevels["LoafingUpgrade"] = level;
+                    _upgradeLevels["LoafingUpgrade"] = level; //Save level 
                     OnBiscuitsPerSecChanged.Invoke(_biscuitsPerSec);
                     break;
 
                 case UpgradeType.ZoomiesUpgrade:
                     _biscuitPerClick = 1 + level * 2;
                     _biscuitsPerSec = level * 2;
-                    _upgradeLevels["ZoomiesUpgrade"] = level; 
+                    _upgradeLevels["ZoomiesUpgrade"] = level; //Save level 
                     OnBiscuitsPerSecChanged.Invoke(_biscuitsPerSec);
                     break; 
             }
@@ -102,6 +91,20 @@ public class GameManager : MonoBehaviour
             return true;
         }
         return false;
+    }
+    public int GetUpgradeLevel(UpgradeType upgradeType)
+    {
+        //Default to level 0 if no level is found 
+        if (_upgradeLevels.ContainsKey(upgradeType.ToString()))
+        {
+            return _upgradeLevels[upgradeType.ToString()];
+        }
+        return 0;
+    }
+    public void SetUpgradeLevel(UpgradeType upgradeType, int level)
+    {
+        _upgradeLevels[upgradeType.ToString()] = level;
+        SaveGame();
     }
     private void Update()
     {
@@ -112,50 +115,55 @@ public class GameManager : MonoBehaviour
             TotalBiscuits += _biscuitsPerSec;
         }
     }
-    //private void Start()
-    //{
-    //    TotalBiscuits = 0;
-    //    BiscuitPerSec = 0;
-    //}
     private void SaveGame()
     {
-        GameData gameData = new GameData
-        {
-            totalBiscuits = _totalBiscuits, //Save total biscuits from _totalBiscuits 
-            biscuitsPerSecond = _biscuitsPerSec,    //Save biscuits per second from _biscuitsPerSec; 
-            upgradeLevels = _upgradeLevels     //Save the upgrade levels dictionary 
-        };
+        //Save total biscuits and biscuits per second 
+        PlayerPrefs.SetInt("TotalBiscuits", _totalBiscuits);
+        PlayerPrefs.SetInt("BiscuitsPerSecond", _biscuitsPerSec); 
 
-        _gameSaveManager.SaveGame(gameData);
+        //Save the upgrade levels 
+        foreach(var upgrade in _upgradeLevels)
+        {
+            PlayerPrefs.SetInt(upgrade.Key + "Level", upgrade.Value);
+        }
+
+        PlayerPrefs.Save(); //Save everything to playerprefs 
     }
     private void LoadGame()
     {
-        GameData loadedData = _gameSaveManager.LoadGame();
-        if(loadedData != null )
+        //Load total biscuits and biscuits per second 
+        if (PlayerPrefs.HasKey("TotalBiscuits"))
         {
-            _totalBiscuits = loadedData.totalBiscuits;
-            _biscuitsPerSec = loadedData.biscuitsPerSecond;
-            _upgradeLevels = loadedData.upgradeLevels;
-
-            if (_upgradeLevels.ContainsKey("BiscuitUpgrade"))
-            {
-                int level = _upgradeLevels["BiscuitUpgrade"];
-                _biscuitPerClick = 1 + level * 2; 
-            }
-            if (_upgradeLevels.ContainsKey("LoafingUpgrade"))
-            {
-                int level = _upgradeLevels["LoafingUpgrade"];
-                _biscuitsPerSec = level;
-                OnBiscuitsPerSecChanged.Invoke(_biscuitsPerSec); 
-            }
-            if (_upgradeLevels.ContainsKey("ZoomiesUpgrade"))
-            {
-                int level = _upgradeLevels["ZoomiesUpgrade"];
-                _biscuitPerClick = 1 + level * 2;
-                _biscuitsPerSec = level * 2;
-                OnBiscuitsPerSecChanged.Invoke(_biscuitsPerSec); 
-            }
-            OnTotalBiscuitsChanged.Invoke(_totalBiscuits);
+            _totalBiscuits = PlayerPrefs.GetInt("TotalBiscuits"); 
         }
+        if (PlayerPrefs.HasKey("BiscuitsPerSecond"))
+        {
+            _biscuitsPerSec = PlayerPrefs.GetInt("BiscuitsPerSecond");
+            OnBiscuitsPerSecChanged.Invoke(_biscuitsPerSec); //Update the UI/Events
+        }
+
+        //Load the Upgrade levels 
+        if (PlayerPrefs.HasKey("BiscuitUpgradeLevel"))
+        {
+            int biscuitUpgradeLevel = PlayerPrefs.GetInt("BiscuitUpgradeLevel");
+            _biscuitPerClick = 1 + biscuitUpgradeLevel * 2;
+            _upgradeLevels["BiscuitUpgrade"] = biscuitUpgradeLevel; 
+        }
+        if (PlayerPrefs.HasKey("LoafingUpgradeLevel"))
+        {
+            int loafingUpgradeLevel = PlayerPrefs.GetInt("LoafingUpgradeLevel");
+            _biscuitsPerSec = loafingUpgradeLevel;
+            _upgradeLevels["LoafingUpgrade"] = loafingUpgradeLevel;
+            OnBiscuitsPerSecChanged.Invoke(_biscuitsPerSec); 
+        }
+        if (PlayerPrefs.HasKey("ZoomiesUpgradeLevel"))
+        {
+            int zoomiesUpgradeLevel = PlayerPrefs.GetInt("ZoomiesUpgradeLevel");
+            _biscuitPerClick = 1 + zoomiesUpgradeLevel * 2;
+            _biscuitsPerSec = zoomiesUpgradeLevel * 2;
+            _upgradeLevels["ZoomiesUpgrade"] = zoomiesUpgradeLevel; 
+            OnBiscuitsPerSecChanged.Invoke(_biscuitsPerSec);
+        }
+        OnTotalBiscuitsChanged.Invoke(_totalBiscuits);
     }
 }

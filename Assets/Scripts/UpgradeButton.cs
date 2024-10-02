@@ -23,8 +23,16 @@ public class UpgradeButton : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        //Get the saved level from GameManager 
+        Level = _gameManager.GetUpgradeLevel(_upgradeType); 
+
+        //Update the UI with the correct values 
         UpdateUI();
+
+        //Add listener for the button click 
         GetComponent<Button>().onClick.AddListener(OnUpgradeClicked);
+
+        //Add listener for when total biscuits change 
         _gameManager.OnTotalBiscuitsChanged.AddListener(TotalBiscuitsChanged);
     }
     public void TotalBiscuitsChanged(int totalBiscuits)
@@ -38,7 +46,13 @@ public class UpgradeButton : MonoBehaviour
         bool purchaseUpgrade = _gameManager.TryPurchaseUpgrade(currentCost, Level, _upgradeType);
         if (purchaseUpgrade)
         {
+            //Increment the level
             Level++;
+
+            //Save the new level in the gamemanager 
+            _gameManager.SetUpgradeLevel(_upgradeType, Level);
+
+            //Update the UI
             UpdateUI(); 
         }
     }
